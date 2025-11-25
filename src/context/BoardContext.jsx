@@ -1,75 +1,88 @@
-// BoardContext.jsx
 // src/context/BoardContext.jsx
-import React, { createContext, useState, useEffect } from "react";
-import { getFromStorage, saveToStorage } from "../utils/storage";
+import React, { createContext, useState, useEffect, useContext, useCallback } from "react";
+import { AuthContext } from "./AuthContext";
 
 export const BoardContext = createContext();
 
 export const BoardProvider = ({ children }) => {
+  const { user } = useContext(AuthContext);
   const [boards, setBoards] = useState([]);
 
-  // Load boards from localStorage when app starts
-  useEffect(() => {
-    const storedBoards = getFromStorage("boards");
-    if (storedBoards) setBoards(storedBoards);
-  }, []);
+  // Get the correct storage key for the current user
+const getKey = useCallback(() => {
+  return `${user?.id}-boards`;
+}, [user?.id]);
 
-  // Save boards whenever they change
-  useEffect(() => {
-    saveToStorage("boards", boards);
-  }, [boards]);
+useEffect(() => {
+    if (!user) return; // Avoid errors when logged out
+  const savedBoards = JSON.parse(localStorage.getItem(getKey())) || [];
+  setBoards(savedBoards);
+}, [getKey, user]);
 
-  // Create new board
+useEffect(() => {
+  if (!user) return;
+  localStorage.setItem(getKey(), JSON.stringify(boards));
+}, [boards, user, getKey]);
+
+
+  /* ------- BOARD CRUD ------- */
+
   const addBoard = (title) => {
     const newBoard = { id: Date.now(), title, tasks: [] };
     setBoards([...boards, newBoard]);
   };
 
-  // Rename board
   const renameBoard = (id, newTitle) => {
+    setBoards(boards.map(b => b.id === id ? { ...b, title: newTitle } : b));
+  };
+
+  // const deleteBoard = (id) => {
+  //   setBoards(boards.filter(b => b.id !== id));
+  // };
+
+  /* ------- TASK CRUD ------- */
+
+  const updateTasks = (id, tasks) => {
     setBoards(
-      boards.map((b) => (b.id === id ? { ...b, title: newTitle } : b))
+      boards.map(b => (b.id === id ? { ...b, tasks } : b))
     );
   };
 
-  // Delete board
-  const deleteBoard = (id) => {
-    setBoards(boards.filter((b) => b.id !== id));
-        };
-        
-        // Inside BoardProvider (after deleteBoard)
-        const updateTasks = (id, tasks) => {
-        setBoards(
-            boards.map((b) => (b.id === id ? { ...b, tasks } : b))
-        );
-        };
+  const editTask = (boardId, updatedTask) => {
+    setBoards(prev =>
+      prev.map(board =>
+        board.id === boardId
+          ? {
+              ...board,
+              tasks: board.tasks.map(t =>
+                t.id === updatedTask.id ? updatedTask : t
+              )
+            }
+          : board
+      )
+    );
+  };
 
+  const deleteTask = (boardId, taskId) => {
+    setBoards(prev =>
+      prev.map(board =>
+        board.id === boardId
+          ? {
+              ...board,
+              tasks: board.tasks.filter(t => t.id !== taskId)
+            }
+          : board
+      )
+    );
+  };
 
-        // Inside BoardProvider
-    const editTask = (boardId, updatedTask) => {
-      setBoards((prev) =>
-        prev.map((board) =>
-          board.id === boardId
-            ? {
-                ...board,
-                tasks: board.tasks.map((t) =>
-                  t.id === updatedTask.id ? updatedTask : t
-                ),
-              }
-            : board
-        )
-      );
-    };
+  // inside your BoardContext provider
+const deleteBoard = (boardId) => {
+  setBoards(prev => prev.filter(b => b.id !== boardId));
+  // Optional: persist in localStorage if you store boards there
+  localStorage.setItem("boards", JSON.stringify(boards.filter(b => b.id !== boardId)));
+};
 
-    const deleteTask = (boardId, taskId) => {
-      setBoards((prev) =>
-        prev.map((board) =>
-          board.id === boardId
-            ? { ...board, tasks: board.tasks.filter((t) => t.id !== taskId) }
-            : board
-        )
-      );
-    };
 
   return (
     <BoardContext.Provider
@@ -80,13 +93,10 @@ export const BoardProvider = ({ children }) => {
         deleteBoard,
         updateTasks,
         editTask,
-        deleteTask,
+        deleteTask
       }}
     >
       {children}
     </BoardContext.Provider>
-
-
   );
 };
-

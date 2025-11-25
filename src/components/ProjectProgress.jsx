@@ -17,7 +17,10 @@ const ProjectProgress = ({ boards, filters = {} }) => {
 
         const subtasks = task.subtasks || [];
         totalSubtasks += subtasks.length + 1; // +1 for the main task
-        completedSubtasks += (task.status === 'done' ? 1 : 0) + subtasks.filter(s => s.done).length;
+
+        // Use robust completion check
+        const isTaskCompleted = task.completed || task.statusNormalized === 'done';
+        completedSubtasks += (isTaskCompleted ? 1 : 0) + subtasks.filter(s => s.done).length;
       });
 
       const progress = totalSubtasks === 0 ? 0 : (completedSubtasks / totalSubtasks) * 100;

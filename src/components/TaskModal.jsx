@@ -1,117 +1,220 @@
-// src/components/TaskModal.jsx
 import React, { useState } from "react";
-import { Modal, Button, Label, TextInput, Textarea, Select } from "flowbite-react";
+import { motion, AnimatePresence } from "framer-motion";
 
 const TaskModal = ({ task, onSave, onClose }) => {
+  const [loading, setLoading] = useState(false);
+
   const [form, setForm] = useState({
-    title: task.title,
-    description: task.description || "",
-    dueDate: task.dueDate || "",
-    priority: task.priority || "Medium",
-    subtasks: task.subtasks || []
+    title: task?.title || "",
+    description: task?.description || "",
+    dueDate: task?.dueDate || "",
+    priority: task?.priority || "Medium",
+    subtasks: task?.subtasks || [],
   });
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  const handleSubtaskChange = (id, done) => {
-    const updated = form.subtasks.map(s => s.id === id ? { ...s, done } : s);
-    setForm({ ...form, subtasks: updated });
+  const addSubtask = () => {
+    setForm({
+      ...form,
+      subtasks: [...form.subtasks, { id: Date.now(), title: "", done: false }],
+    });
   };
 
-  const addSubtask = () => {
-    const newSubtask = { id: Date.now(), title: "New Subtask", done: false };
-    setForm({ ...form, subtasks: [...form.subtasks, newSubtask] });
+  const updateSubtask = (id, value) => {
+    setForm({
+      ...form,
+      subtasks: form.subtasks.map((s) =>
+        s.id === id ? { ...s, title: value } : s
+      ),
+    });
+  };
+
+  const toggleSubtask = (id, done) => {
+    setForm({
+      ...form,
+      subtasks: form.subtasks.map((s) =>
+        s.id === id ? { ...s, done } : s
+      ),
+    });
   };
 
   const removeSubtask = (id) => {
-    setForm({ ...form, subtasks: form.subtasks.filter(s => s.id !== id) });
+    setForm({
+      ...form,
+      subtasks: form.subtasks.filter((s) => s.id !== id),
+    });
   };
 
-  const handleSubmit = () => {
-    onSave({ ...task, ...form, updatedAt: new Date().toISOString() });
+  const handleSubmit = async () => {
+    setLoading(true);
+
+    const data = {
+      ...task,
+      ...form,
+      updatedAt: new Date().toISOString(),
+    };
+
+    await new Promise((res) => setTimeout(res, 600)); // smooth UX delay
+
+    onSave(data);
+    setLoading(false);
   };
 
   return (
-    <Modal show={!!task} onClose={onClose}>
-      <Modal.Header>Edit Task</Modal.Header>
-      <Modal.Body>
-        <div className="space-y-4">
-          <div>
-            <Label value="Title" />
-            <TextInput
-              name="title"
-              value={form.title}
-              onChange={handleChange}
-              placeholder="Task title"
-              required
-            />
-          </div>
+    <AnimatePresence>
+      {task && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          {/* Backdrop */}
+          <motion.div
+            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+            onClick={onClose}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          />
 
-          <div>
-            <Label value="Description" />
-            <Textarea
-              name="description"
-              rows={3}
-              value={form.description}
-              onChange={handleChange}
-            />
-          </div>
+          {/* Modal */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.85 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.85 }}
+            transition={{ duration: 0.2, ease: "easeOut" }}
+            className="relative z-10 w-full max-w-lg bg-white rounded-2xl p-6 shadow-2xl"
+          >
+            <h2 className="text-2xl font-semibold mb-4">Edit Task</h2>
 
-          <div>
-            <Label value="Due Date" />
-            <TextInput
-              type="date"
-              name="dueDate"
-              value={form.dueDate}
-              onChange={handleChange}
-            />
-          </div>
+            <div className="space-y-4">
 
-          <div>
-            <Label value="Priority" />
-            <Select name="priority" value={form.priority} onChange={handleChange}>
-              <option>Low</option>
-              <option>Medium</option>
-              <option>High</option>
-              <option>Urgent</option>
-            </Select>
-          </div>
-
-          <div>
-            <Label value="Subtasks" />
-            {form.subtasks.map((s) => (
-              <div key={s.id} className="flex items-center gap-2 mb-1">
+              {/* Title */}
+              <div>
+                <label className="text-sm font-medium">Title</label>
                 <input
-                  type="checkbox"
-                  checked={s.done}
-                  onChange={(e) => handleSubtaskChange(s.id, e.target.checked)}
+                  type="text"
+                  name="title"
+                  value={form.title}
+                  onChange={handleChange}
+                  className="w-full mt-1 px-3 py-2 rounded-lg border focus:ring-2 ring-blue-400 outline-none transition"
+                  placeholder="Task title"
                 />
-                <TextInput
-                  value={s.title}
-                  onChange={(e) =>
-                    setForm({
-                      ...form,
-                      subtasks: form.subtasks.map(st =>
-                        st.id === s.id ? { ...st, title: e.target.value } : st
-                      )
-                    })
-                  }
-                  placeholder="Subtask title"
-                />
-                <Button color="red" onClick={() => removeSubtask(s.id)}>X</Button>
               </div>
-            ))}
-            <Button size="sm" onClick={addSubtask}>+ Add Subtask</Button>
-          </div>
+
+              {/* Description */}
+              <div>
+                <label className="text-sm font-medium">Description</label>
+                <textarea
+                  name="description"
+                  value={form.description}
+                  onChange={handleChange}
+                  rows="3"
+                  className="w-full mt-1 px-3 py-2 rounded-lg border focus:ring-2 ring-blue-400 outline-none transition"
+                  placeholder="Describe this task..."
+                />
+              </div>
+
+              {/* Due Date */}
+              <div>
+                <label className="text-sm font-medium">Due Date</label>
+                <input
+                  type="date"
+                  name="dueDate"
+                  value={form.dueDate}
+                  onChange={handleChange}
+                  className="w-full mt-1 px-3 py-2 rounded-lg border focus:ring-2 ring-blue-400 outline-none transition"
+                />
+              </div>
+
+              {/* Priority */}
+              <div>
+                <label className="text-sm font-medium">Priority</label>
+                <select
+                  name="priority"
+                  value={form.priority}
+                  onChange={handleChange}
+                  className="w-full mt-1 px-3 py-2 rounded-lg border focus:ring-2 ring-blue-400 outline-none transition"
+                >
+                  <option>Low</option>
+                  <option>Medium</option>
+                  <option>High</option>
+                  <option>Urgent</option>
+                </select>
+              </div>
+
+              {/* Subtasks */}
+              <div>
+                <label className="text-sm font-medium">Subtasks</label>
+
+                <div className="space-y-3 mt-2">
+                  {form.subtasks.map((s) => (
+                    <div
+                      key={s.id}
+                      className="flex items-center gap-3 bg-gray-100 p-2 rounded-lg"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={s.done}
+                        onChange={(e) => toggleSubtask(s.id, e.target.checked)}
+                        className="accent-blue-600 w-4 h-4"
+                      />
+
+                      <input
+                        type="text"
+                        value={s.title}
+                        onChange={(e) => updateSubtask(s.id, e.target.value)}
+                        className="flex-1 px-3 py-1 rounded-md border focus:ring-2 ring-blue-300 outline-none transition"
+                        placeholder="Subtask title"
+                      />
+
+                      <button
+                        onClick={() => removeSubtask(s.id)}
+                        className="text-red-500 text-sm hover:text-red-700 transition"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ))}
+
+                  <button
+                    onClick={addSubtask}
+                    className="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300 transition"
+                  >
+                    + Add Subtask
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="flex justify-end gap-3 mt-6">
+              <button
+                onClick={onClose}
+                className="px-4 py-2 rounded-lg bg-gray-200 hover:bg-gray-300 transition"
+              >
+                Cancel
+              </button>
+
+              <button
+                disabled={loading}
+                onClick={handleSubmit}
+                className="px-5 py-2 rounded-lg bg-blue-600 text-white font-semibold 
+                           hover:bg-blue-700 active:scale-95 transition flex items-center gap-2"
+              >
+                {loading ? (
+                  <>
+                    <span className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full"></span>
+                    Saving...
+                  </>
+                ) : (
+                  "Save Changes"
+                )}
+              </button>
+            </div>
+          </motion.div>
         </div>
-      </Modal.Body>
-      <Modal.Footer>
-        <Button onClick={handleSubmit}>Save Changes</Button>
-        <Button color="gray" onClick={onClose}>Cancel</Button>
-      </Modal.Footer>
-    </Modal>
+      )}
+    </AnimatePresence>
   );
 };
 

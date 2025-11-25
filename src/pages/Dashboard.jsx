@@ -55,7 +55,7 @@ const Dashboard = () => {
       <div className="flex flex-col md:flex-row justify-between mb-4 gap-4">
         <button
           onClick={toggleTheme}
-          className="p-2 rounded-full bg-white dark:bg-gray-800 shadow-md"
+          className="p-2 rounded-full bg-white  dark:text-white dark:bg-gray-600 shadow-md"
         >
           Toggle Theme
         </button>

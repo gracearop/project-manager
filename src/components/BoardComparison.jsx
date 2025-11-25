@@ -6,7 +6,9 @@ const BoardComparison = ({ boards }) => {
   const boardStats = useMemo(() => {
     return boards.map(board => {
       const total = board.tasks.length;
-      const done = board.tasks.filter(t => t.status === 'done').length;
+      const done = board.tasks.filter(
+        t => t.completed || t.statusNormalized === 'done'
+      ).length; // robust completion check
       const percent = total === 0 ? 0 : Math.round((done / total) * 100);
       return { id: board.id, title: board.title, total, done, percent };
     });
@@ -24,7 +26,7 @@ const BoardComparison = ({ boards }) => {
       {boardStats.length === 0 ? (
         <div className="text-gray-600 dark:text-gray-400 text-sm">No boards available</div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6">
           {boardStats.map(board => (
             <div key={board.id} className="bg-gray-100 dark:bg-gray-700 p-4 rounded-lg shadow-sm">
               <h3 className="font-medium mb-2 text-gray-800 dark:text-gray-200">{board.title}</h3>
